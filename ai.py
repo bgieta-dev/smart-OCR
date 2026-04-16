@@ -62,16 +62,18 @@ def ai_check(img_path, host=None):
                     'temperature': 0.0,
                 },
             )
+            
+            print(f"AI Time: {time.time() - start_ai:.2f}s")
+            print(f"Total Time: {time.time() - start_total:.2f}s")
+            
+            content = response.message.content
+            return content
+
         except Exception as conn_err:
             error_msg = f"Nie można połączyć się z serwerem Ollama pod adresem {host}. Upewnij się, że serwer działa i OLLAMA_HOST jest ustawione na 0.0.0.0. Szczegóły: {str(conn_err)}"
             print(f"Błąd połączenia: {error_msg}")
             return json.dumps({"error": error_msg})
-        
-        print(f"AI Time: {time.time() - start_ai:.2f}s")
-        print(f"Total Time: {time.time() - start_total:.2f}s")
-        
-        content = response.message.content
-        return content
+
     except Exception as e:
         return json.dumps({"error": f"Wystąpił błąd podczas przetwarzania AI: {str(e)}"})
 
