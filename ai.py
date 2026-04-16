@@ -5,6 +5,8 @@ import time
 from PIL import Image
 import io
 import config
+import json
+
 # Pobieramy ścieżkę do katalogu, w którym znajduje się skrypt
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,7 +28,7 @@ def ai_check(img_path, host=None):
         img_path = os.path.join(SCRIPT_DIR, img_path)
 
     if not os.path.exists(img_path):
-        return f"Błąd: Nie znaleziono pliku obrazu: {img_path}"
+        return json.dumps({"error": f"Błąd: Nie znaleziono pliku obrazu: {img_path}"})
 
     try:
         img = Image.open(img_path).convert('L')  
@@ -48,17 +50,22 @@ def ai_check(img_path, host=None):
         # Inicjalizacja klienta Ollama z konkretnym hostem
         client = Client(host=host)
         
-        response = client.chat(
-            model=model,
-            messages=[
-                {'role': 'system', 'content': prompt},
-                {'role': 'user', 'content': "Extract all numbers from all P-number sections in the image and return them in the specified JSON format.", 'images': [image_bytes]}
-            ],
-            format='json',
-            options={
-                'temperature': 0.0,
-            },
-        )
+        try:
+            response = client.chat(
+                model=model,
+                messages=[
+                    {'role': 'system', 'content': prompt},
+                    {'role': 'user', 'content': "Extract all numbers from all P-number sections in the image and return them in the specified JSON format.", 'images': [image_bytes]}
+                ],
+                format='json',
+                options={
+                    'temperature': 0.0,
+                },
+            )
+        except Exception as conn_err:
+            error_msg = f"Nie można połączyć się z serwerem Ollama pod adresem {host}. Upewnij się, że serwer działa i OLLAMA_HOST jest ustawione na 0.0.0.0. Szczegóły: {str(conn_err)}"
+            print(f"Błąd połączenia: {error_msg}")
+            return json.dumps({"error": error_msg})
         
         print(f"AI Time: {time.time() - start_ai:.2f}s")
         print(f"Total Time: {time.time() - start_total:.2f}s")
@@ -66,7 +73,7 @@ def ai_check(img_path, host=None):
         content = response.message.content
         return content
     except Exception as e:
-        return f"Wystąpił błąd podczas przetwarzania AI: {str(e)}"
+        return json.dumps({"error": f"Wystąpił błąd podczas przetwarzania AI: {str(e)}"})
 
 if __name__ == "__main__":
     content = ai_check("ready_image.png")
