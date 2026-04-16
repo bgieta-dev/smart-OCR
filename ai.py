@@ -1,7 +1,6 @@
 import numpy as np
 import os
-from ollama import chat
-from ollama import ChatResponse
+from ollama import Client
 import time
 from PIL import Image
 import io
@@ -17,7 +16,11 @@ def prompt_reader():
     with open(prompt_path, "r") as f:
         return f.read().strip()
 
-def ai_check(img_path):
+def ai_check(img_path, host=None):
+    # Jeśli host nie został podany, używamy lokalnego z configu
+    if host is None:
+        host = config.host_local
+
     # Jeśli ścieżka nie jest absolutna, szukaj jej względem katalogu skryptu
     if not os.path.isabs(img_path):
         img_path = os.path.join(SCRIPT_DIR, img_path)
@@ -39,10 +42,13 @@ def ai_check(img_path):
 
         start_total = time.time()
         prompt = prompt_reader()
-        print(f"Sending to Ollama (Using {model}) image: {os.path.basename(img_path)}...")
+        print(f"Sending to Ollama ({host}) (Using {model}) image: {os.path.basename(img_path)}...")
         start_ai = time.time()
         
-        response: ChatResponse = chat(
+        # Inicjalizacja klienta Ollama z konkretnym hostem
+        client = Client(host=host)
+        
+        response = client.chat(
             model=model,
             messages=[
                 {'role': 'system', 'content': prompt},
