@@ -44,14 +44,12 @@ def ai_check(img_path, host=None):
 
         start_total = time.time()
         prompt = prompt_reader()
-        print(f"Sending to Ollama ({host}) (Using {model}) image: {os.path.basename(img_path)}...")
-        start_ai = time.time()
         
-        # Inicjalizacja klienta Ollama z konkretnym hostem
-        client = Client(host=host)
-        
-        try:
-            response = client.chat(
+        # Próba połączenia z wybranym hostem
+        def call_ollama(target_host):
+            print(f"Sending to Ollama ({target_host}) (Using {model}) image: {os.path.basename(img_path)}...")
+            client = Client(host=target_host)
+            return client.chat(
                 model=model,
                 messages=[
                     {'role': 'system', 'content': prompt},
@@ -62,18 +60,28 @@ def ai_check(img_path, host=None):
                     'temperature': 0.0,
                 },
             )
-            
-            print(f"AI Time: {time.time() - start_ai:.2f}s")
-            print(f"Total Time: {time.time() - start_total:.2f}s")
-            
-            content = response.message.content
-            return content
 
+        start_ai = time.time()
+        try:
+            response = call_ollama(host)
         except Exception as conn_err:
-            error_msg = f"Nie można połączyć się z serwerem Ollama pod adresem {host}. Upewnij się, że serwer działa i OLLAMA_HOST jest ustawione na 0.0.0.0. Szczegóły: {str(conn_err)}"
-            print(f"Błąd połączenia: {error_msg}")
-            return json.dumps({"error": error_msg})
-
+            # Jeśli podstawowy host zdalny zawiedzie, spróbuj automatycznie hosta zapasowego
+            if host == config.host_remote:
+                print(f"Primary host {host} failed. Trying backup host {config.host_backup}...")
+                try:
+                    response = call_ollama(config.host_backup)
+                except Exception as backup_err:
+                    error_msg = f"Błąd: Nie można połączyć się z głównym ({host}) ani zapasowym ({config.host_backup}) serwerem Ollama. Szczegóły: {str(backup_err)}"
+                    return json.dumps({"error": error_msg})
+            else:
+                error_msg = f"Nie można połączyć się z serwerem Ollama pod adresem {host}. Szczegóły: {str(conn_err)}"
+                return json.dumps({"error": error_msg})
+        
+        print(f"AI Time: {time.time() - start_ai:.2f}s")
+        print(f"Total Time: {time.time() - start_total:.2f}s")
+        
+        content = response.message.content
+        return content
     except Exception as e:
         return json.dumps({"error": f"Wystąpił błąd podczas przetwarzania AI: {str(e)}"})
 
