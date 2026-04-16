@@ -1,52 +1,76 @@
 import cv2 as cv
 import numpy as np
+import os
 from pdf2image import convert_from_path
 
+# Pobieramy ścieżkę do katalogu, w którym znajduje się skrypt
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def image_processing(path):
+    # Jeśli ścieżka nie jest absolutna, szukaj jej względem katalogu skryptu
+    if not os.path.isabs(path):
+        path = os.path.join(SCRIPT_DIR, path)
+        
+    if not os.path.exists(path):
+        print(f"Błąd: Nie znaleziono pliku wejściowego: {path}")
+        return
+
     if path.lower().endswith(".pdf"):
         # Convert PDF to PNG with highest resolution (600 DPI)
-        img = convert_from_path(path)[0]
-        
+        try:
+            pages = convert_from_path(path)
+            if not pages:
+                print(f"Błąd: Nie udało się skonwertować PDF: {path}")
+                return
+            img = pages[0]
+        except Exception as e:
+            print(f"Błąd podczas konwersji PDF: {e}")
+            return
     else:
         img = cv.imread(path)
-    img = cv.cvtColor(np.array(img),cv.COLOR_BGR2GRAY)
-    template = cv.imread('template.png', 0)
-    h, w = template.shape[:2]
-    h_img, w_img = img.shape[:2]
-    top, bottom = 0, 0
-    if h_img > w_img:
-        h_img, w_img = w_img, h_img
-        img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
+        if img is None:
+            print(f"Błąd: Nie udało się wczytać obrazu: {path}")
+            return
 
-    res = cv.matchTemplate(img, template, cv.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+    img_gray = cv.cvtColor(np.array(img), cv.COLOR_BGR2GRAY)
+    
+    template_path = os.path.join(SCRIPT_DIR, 'template.png')
+    template = cv.imread(template_path, 0)
+    if template is None:
+        print(f"Błąd: Nie znaleziono szablonu: {template_path}")
+        # Tworzymy pusty placeholder jeśli brak szablonu, aby skrypt się nie wywalił
+        # lub po prostu przerywamy
+        return
+
+    h, w = template.shape[:2]
+    h_img, w_img = img_gray.shape[:2]
+    top, bottom = 0, 0
+    
+    if h_img > w_img:
+        # Zakładamy orientację poziomą dla przetwarzania
+        img_gray = cv.rotate(img_gray, cv.ROTATE_90_CLOCKWISE)
+        h_img, w_img = w_img, h_img
+
+    res = cv.matchTemplate(img_gray, template, cv.TM_CCOEFF_NORMED)
     threshold = 0.75
     loc = np.where(res >= threshold)
 
     for pt in zip(*loc[::-1]): 
-        bottom_right = (pt[0] + w, pt[1] + h)
-        #cv.rectangle(img, pt, bottom_right, (0, 255, 0), 2)
-        if(pt[1]<h_img/2):
-            top+=1
+        if pt[1] < h_img / 2:
+            top += 1
         else:
-            bottom+=1
-    print(top, bottom)
-    top_left = max_loc
-    bottom_right = (top_left[0] + w, top_left[1] + h)
+            bottom += 1
+    
+    print(f"Top matches: {top}, Bottom matches: {bottom}")
 
     if top < bottom:
-        img = cv.rotate(img, cv.ROTATE_180)
-        
+        img_gray = cv.rotate(img_gray, cv.ROTATE_180)
     
-    img = cv.resize(img, None, fx=0.5, fy=0.5, interpolation=cv.INTER_AREA)
-    cv.imwrite("ready_image.png",img)
-    """
-    cv.imshow("Result", img)
-    cv.waitKey(0) 
-    cv.destroyAllWindows()
-    """
+    img_resized = cv.resize(img_gray, None, fx=0.5, fy=0.5, interpolation=cv.INTER_AREA)
+    
+    output_path = os.path.join(SCRIPT_DIR, "ready_image.png")
+    cv.imwrite(output_path, img_resized)
+    print(f"Zapisano wynik do: {output_path}")
 
 if __name__=="__main__":
-    #image_processing("Szablon.png")
     image_processing('Skan 1.pdf')
