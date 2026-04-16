@@ -17,9 +17,9 @@ def prompt_reader():
         return f.read().strip()
 
 def ai_check(img_path, host=None):
-    # Jeśli host nie został podany, używamy lokalnego z configu
+    # Jeśli host nie został podany, używamy zdalnego z configu (domyślny)
     if host is None:
-        host = config.host_local
+        host = config.host_remote
 
     # Jeśli ścieżka nie jest absolutna, szukaj jej względem katalogu skryptu
     if not os.path.isabs(img_path):
