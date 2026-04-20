@@ -12,35 +12,33 @@ def image_processing(path):
         path = os.path.join(SCRIPT_DIR, path)
         
     if not os.path.exists(path):
-        print(f"Błąd: Nie znaleziono pliku wejściowego: {path}")
-        return None
+        raise FileNotFoundError(f"Nie znaleziono pliku wejściowego: {path}")
 
     if path.lower().endswith(".pdf"):
         # Convert PDF to PNG with highest resolution (600 DPI)
         try:
             pages = convert_from_path(path)
             if not pages:
-                print(f"Błąd: Nie udało się skonwertować PDF: {path}")
-                return None
+                raise ValueError(f"Nie udało się skonwertować PDF (pusta lista stron): {path}")
             img = pages[0]
             # Convert PIL image to numpy array for CV2
             img = cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
         except Exception as e:
-            print(f"Błąd podczas konwersji PDF: {e}")
-            return None
+            raise RuntimeError(f"Błąd podczas konwersji PDF: {str(e)}")
     else:
         img = cv.imread(path)
         if img is None:
-            print(f"Błąd: Nie udało się wczytać obrazu: {path}")
-            return None
+            raise ValueError(f"Nie udało się wczytać obrazu przez OpenCV: {path}")
 
     img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     
     template_path = os.path.join(SCRIPT_DIR, 'template.png')
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(f"Nie znaleziono pliku szablonu: {template_path}")
+        
     template = cv.imread(template_path, 0)
     if template is None:
-        print(f"Błąd: Nie znaleziono szablonu: {template_path}")
-        return None
+        raise ValueError(f"Błąd podczas wczytywania szablonu: {template_path}")
 
     h_img, w_img = img_gray.shape[:2]
     top, bottom = 0, 0
@@ -60,7 +58,7 @@ def image_processing(path):
         else:
             bottom += 1
     
-    print(f"Top matches: {top}, Bottom matches: {bottom}")
+    # print(f"Top matches: {top}, Bottom matches: {bottom}")
 
     if top < bottom:
         img_gray = cv.rotate(img_gray, cv.ROTATE_180)
@@ -69,6 +67,8 @@ def image_processing(path):
     return img_resized
 
 if __name__=="__main__":
-    result = image_processing('Skan 1.pdf')
-    if result is not None:
+    try:
+        result = image_processing('Skan 1.pdf')
         print(f"Przetworzono obraz. Kształt: {result.shape}")
+    except Exception as e:
+        print(f"Błąd: {e}")

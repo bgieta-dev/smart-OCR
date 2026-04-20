@@ -102,12 +102,12 @@ def ai_check(img_input, host=None):
 if __name__ == "__main__":
     from image_processing import image_processing
     
-    # Przetwarzamy obraz do np.array
-    processed_array = image_processing('Skan 1.pdf')
-    
-    if processed_array is not None:
+    try:
+        # Przetwarzamy obraz do np.array
+        processed_array = image_processing('Skan 1.pdf')
+        
         # Przekazujemy np.array bezpośrednio do ai_check
         content = ai_check(processed_array)
         print(content)
-    else:
-        print("Błąd: image_processing nie zwrócił danych.")
+    except Exception as e:
+        print(f"Błąd: {e}")
