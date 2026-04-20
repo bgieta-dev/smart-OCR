@@ -17,5 +17,5 @@ Narzędzie do inteligentnej ekstrakcji danych numerycznych z dokumentów (PDF/ob
 ## Uwagi dla Gemini CLI
 
 - **Prompt Engineering**: Zawsze najpierw edytuj `prompt.txt`, jeśli AI nie wyciąga danych poprawnie.
-- **Image Processing**: Funkcja `image_processing()` zapisuje plik `ready_image.png`, który jest następnie czytany przez `ai_check()`. To jedyny moduł, który obecnie wymaga zapisu na dysku.
+- **Image Processing**: Funkcja `image_processing()` zwraca przetworzony obraz jako tablicę NumPy (`np.array`), która jest następnie przekazywana bezpośrednio do `ai_check()`. Moduł nie zapisuje już plików tymczasowych na dysku.
 - **Ollama**: Pamiętaj, że serwer Ollama musi być dostępny lokalnie (zgodnie z `config.py`).

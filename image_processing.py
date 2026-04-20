@@ -13,7 +13,7 @@ def image_processing(path):
         
     if not os.path.exists(path):
         print(f"Błąd: Nie znaleziono pliku wejściowego: {path}")
-        return
+        return None
 
     if path.lower().endswith(".pdf"):
         # Convert PDF to PNG with highest resolution (600 DPI)
@@ -21,28 +21,27 @@ def image_processing(path):
             pages = convert_from_path(path)
             if not pages:
                 print(f"Błąd: Nie udało się skonwertować PDF: {path}")
-                return
+                return None
             img = pages[0]
+            # Convert PIL image to numpy array for CV2
+            img = cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
         except Exception as e:
             print(f"Błąd podczas konwersji PDF: {e}")
-            return
+            return None
     else:
         img = cv.imread(path)
         if img is None:
             print(f"Błąd: Nie udało się wczytać obrazu: {path}")
-            return
+            return None
 
-    img_gray = cv.cvtColor(np.array(img), cv.COLOR_BGR2GRAY)
+    img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     
     template_path = os.path.join(SCRIPT_DIR, 'template.png')
     template = cv.imread(template_path, 0)
     if template is None:
         print(f"Błąd: Nie znaleziono szablonu: {template_path}")
-        # Tworzymy pusty placeholder jeśli brak szablonu, aby skrypt się nie wywalił
-        # lub po prostu przerywamy
-        return
+        return None
 
-    h, w = template.shape[:2]
     h_img, w_img = img_gray.shape[:2]
     top, bottom = 0, 0
     
@@ -67,10 +66,9 @@ def image_processing(path):
         img_gray = cv.rotate(img_gray, cv.ROTATE_180)
     
     img_resized = cv.resize(img_gray, None, fx=0.5, fy=0.5, interpolation=cv.INTER_AREA)
-    
-    output_path = os.path.join(SCRIPT_DIR, "ready_image.png")
-    cv.imwrite(output_path, img_resized)
-    print(f"Zapisano wynik do: {output_path}")
+    return img_resized
 
 if __name__=="__main__":
-    image_processing('Skan 1.pdf')
+    result = image_processing('Skan 1.pdf')
+    if result is not None:
+        print(f"Przetworzono obraz. Kształt: {result.shape}")
