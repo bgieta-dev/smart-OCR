@@ -7,7 +7,6 @@ import io
 import config
 import json
 
-# Pobieramy ścieżkę do katalogu, w którym znajduje się skrypt
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def prompt_reader():
@@ -22,7 +21,6 @@ def ai_check(img_input, host=None):
     """
     img_input: Może być ścieżką do pliku (string) lub tablicą numpy (np.array)
     """
-    # Jeśli host nie został podany, używamy zdalnego z configu (domyślny)
     if host is None:
         host = config.host_remote
 
@@ -47,10 +45,8 @@ def ai_check(img_input, host=None):
         else:
             return json.dumps({"error": f"Błąd: Nieobsługiwany typ wejścia: {type(img_input)}"})
 
-        # Konwersja tablicy numpy na bajty JPEG dla Ollama (bez zapisu na dysku)
         img_pil = Image.fromarray(img_array)
         if img_pil.mode != 'RGB' and img_pil.mode != 'L':
-             # Upewniamy się, że format jest kompatybilny
              img_pil = img_pil.convert('L')
              
         img_bytes_io = io.BytesIO()
@@ -61,7 +57,6 @@ def ai_check(img_input, host=None):
         prompt = prompt_reader()
         model = config.model
         
-        # Próba połączenia z wybranym hostem
         def call_ollama(target_host):
             print(f"Sending to Ollama ({target_host}) (Using {model}) source: {image_name}...")
             client = Client(host=target_host)
@@ -78,20 +73,21 @@ def ai_check(img_input, host=None):
             )
 
         start_ai = time.time()
-        try:
-            response = call_ollama(host)
-        except Exception as conn_err:
-            if host == config.host_remote:
-                print(f"Primary host {host} failed. Trying backup host {config.host_backup}...")
-                try:
-                    response = call_ollama(config.host_backup)
-                except Exception as backup_err:
-                    error_msg = f"Błąd połączenia: {str(backup_err)}"
-                    return json.dumps({"error": error_msg})
-            else:
-                error_msg = f"Błąd połączenia: {str(conn_err)}"
-                return json.dumps({"error": error_msg})
         
+        hosts_to_try = [host] if host else [config.host_remote, config.host_backup]
+        
+        response = None
+        for current_host in hosts_to_try:
+            try:
+                response = call_ollama(current_host)
+                break 
+            except Exception as conn_err:
+                print(f"Host {current_host} failed: {conn_err}")
+                continue
+        
+        if response is None:
+            return json.dumps({"error": "Błąd: Wszystkie hosty Ollama są nieosiągalne."})
+
         print(f"AI Time: {time.time() - start_ai:.2f}s")
         print(f"Total Time: {time.time() - start_total:.2f}s")
         
