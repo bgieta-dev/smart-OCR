@@ -26,7 +26,6 @@ def ai_check(img_input, host=None):
 
     try:
         if isinstance(img_input, str):
-            # Logika dla ścieżki do pliku
             if not os.path.isabs(img_input):
                 img_path = os.path.join(SCRIPT_DIR, img_input)
             else:
@@ -39,7 +38,6 @@ def ai_check(img_input, host=None):
             img_array = np.array(img)
             image_name = os.path.basename(img_path)
         elif isinstance(img_input, np.ndarray):
-            # Logika dla tablicy numpy (to o co prosiłeś)
             img_array = img_input
             image_name = "numpy_memory_array"
         else:
@@ -77,16 +75,23 @@ def ai_check(img_input, host=None):
         hosts_to_try = [host] if host else [config.host_remote, config.host_backup]
         
         response = None
+        errors = []
         for current_host in hosts_to_try:
             try:
                 response = call_ollama(current_host)
                 break 
             except Exception as conn_err:
-                print(f"Host {current_host} failed: {conn_err}")
+                error_msg = f"Host {current_host} nieosiągalny: {str(conn_err)}"
+                print(error_msg)
+                errors.append(error_msg)
                 continue
         
         if response is None:
-            return json.dumps({"error": "Błąd: Wszystkie hosty Ollama są nieosiągalne."})
+            return json.dumps({
+                "error": "Nie można połączyć się z serwerem GPU Ollama.",
+                "details": errors,
+                "hint": "Upewnij się, że serwer Ollama jest uruchomiony i dostępny w sieci (np. Tailscale)."
+            })
 
         print(f"AI Time: {time.time() - start_ai:.2f}s")
         print(f"Total Time: {time.time() - start_total:.2f}s")
