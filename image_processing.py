@@ -3,11 +3,9 @@ import numpy as np
 import os
 from pdf2image import convert_from_path
 
-# Pobieramy ścieżkę do katalogu, w którym znajduje się skrypt
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def image_processing(path):
-    # Jeśli ścieżka nie jest absolutna, szukaj jej względem katalogu skryptu
     if not os.path.isabs(path):
         path = os.path.join(SCRIPT_DIR, path)
         
@@ -15,13 +13,11 @@ def image_processing(path):
         raise FileNotFoundError(f"Nie znaleziono pliku wejściowego: {path}")
 
     if path.lower().endswith(".pdf"):
-        # Convert PDF to PNG with highest resolution (600 DPI)
         try:
             pages = convert_from_path(path)
             if not pages:
                 raise ValueError(f"Nie udało się skonwertować PDF (pusta lista stron): {path}")
             img = pages[0]
-            # Convert PIL image to numpy array for CV2
             img = cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
         except Exception as e:
             raise RuntimeError(f"Błąd podczas konwersji PDF: {str(e)}")
@@ -44,7 +40,6 @@ def image_processing(path):
     top, bottom = 0, 0
     
     if h_img > w_img:
-        # Zakładamy orientację poziomą dla przetwarzania
         img_gray = cv.rotate(img_gray, cv.ROTATE_90_CLOCKWISE)
         h_img, w_img = w_img, h_img
 
@@ -58,7 +53,6 @@ def image_processing(path):
         else:
             bottom += 1
     
-    # print(f"Top matches: {top}, Bottom matches: {bottom}")
 
     if top < bottom:
         img_gray = cv.rotate(img_gray, cv.ROTATE_180)
