@@ -4,7 +4,7 @@ from ollama import Client
 import time
 from PIL import Image
 import io
-import config
+import ocr_config as config
 import json
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
