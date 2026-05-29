@@ -1,0 +1,49 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-amd
+    restart: always
+    ports:
+      - "8000:8000"
+    ipc: host
+    shm_size: '16gb'
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    security_opt:
+      - seccomp:unconfined
+    group_add:
+      - video
+      - render
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    environment:
+      - HSA_OVERRIDE_GFX_VERSION=11.0.0 # Standard override for newer AMD
+    command: >
+      --model Qwen/Qwen2.5-7B-Instruct
+      --max-model-len 4096
+      --gpu-memory-utilization 0.90
+      --trust-remote-code
+
+  ocr-worker:
+    build: .
+    container_name: ocr-worker-amd
+    restart: always
+    depends_on:
+      - vllm
+    ports:
+      - "5000:5000"
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add:
+      - video
+      - render
+    environment:
+      - USE_TORCH=1
+      - VLLM_URL=http://vllm:8000/v1
+      - LLM_MODEL=Qwen/Qwen2.5-7B-Instruct
+    volumes:
+      - .:/app
+      - ~/.cache/doctr:/root/.cache/doctr
+    command: python worker_api.py

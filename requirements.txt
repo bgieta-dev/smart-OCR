@@ -2,11 +2,6 @@ flask
 flask-cors
 numpy
 pillow
-ollama
 opencv-python
-pdf2image
 openai
-paddleocr
-paddlepaddle
-shapely
-pyclipper
+requests

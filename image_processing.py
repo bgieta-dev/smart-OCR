@@ -46,7 +46,7 @@ def image_processing(path):
 
     # Refined marker detection to return all Y-coordinates
     res = cv.matchTemplate(img_gray, template, cv.TM_CCOEFF_NORMED)
-    threshold = 0.8
+    threshold = 0.45
     loc = np.where(res >= threshold)
     
     marker_points = []

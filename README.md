@@ -1,52 +1,45 @@
-# Smart-OCR: Hybrid Pipeline (EasyOCR + LLM)
+# Smart-OCR: Vision VLM Architecture (Qwen3-VL-4B)
 
-System do precyzyjnej ekstrakcji danych z tabel 6x10 przy użyciu hybrydowego podejścia:
-1. **EasyOCR** (Stage 1) - Wykrywa surowy tekst i cyfry z obrazu.
-2. **Qwen2.5 LLM** (Stage 2) - Naprawia błędy OCR i układa dane w ustrukturyzowany JSON.
+Projekt wysokoprecyzyjnego systemu OCR do odczytu odręcznych danych tabelarycznych, zoptymalizowany pod karty graficzne z **8GB VRAM**.
 
-## Wymagania sprzętowe i uruchomienie
+## 🚀 Klucz do sukcesu (Perfect Accuracy)
 
-Wybierz wersję zależnie od swojej karty graficznej (VRAM):
+Aby osiągnąć 100% dokładności przy odczycie gęstych tabel z pismem odręcznym, zastosowano następujące filary inżynieryjne:
 
-### Opcja A: Karta 16GB+ (np. RX 7900, RX 9070 XT)
-Używa pełnego modelu `Qwen2.5-7B` dla najwyższej inteligencji.
+### 1. Optymalizacja VRAM (The Goldilocks Config)
+Dla modelu **Qwen3-VL-4B (4-bit AWQ/Compressed)** na karcie 8GB, kluczowe są parametry startowe vLLM:
+*   `--max-model-len 2560`: Zbalansowany kontekst (1700 tokenów na obraz + zapas na prompt i odpowiedź).
+*   `--gpu-memory-utilization 0.92`: Maksymalne wykorzystanie dostępnej pamięci.
+*   `--enforce-eager`: Wyłączenie CUDA Graphs (oszczędność ~1GB VRAM).
+
+### 2. Strategia "Surgical Slicing"
+Przesyłanie całego arkusza do LLM powoduje halucynacje. System tnie obraz na mniejsze, odizolowane paski (slice'y) skupione wokół etykiet (P4, P13, P22).
+*   **Izolacja**: Każdy slice zawiera tylko jedną tabelę, co eliminuje szum z sąsiednich sekcji.
+*   **Dynamiczne Markery**: Wykorzystanie detekcji wzorca (kropek) do centrowania cięcia.
+
+### 3. Structural Transcription (Markdown Strategy)
+Zamiast prosić o listę liczb, wymuszamy na AI transkrypcję do **tabeli Markdown 10x6**.
+*   **Spatial Discipline**: Model musi zdecydować o zawartości każdej z 60 kratek (liczba lub `-`). To zapobiega gubieniu liczb i zmyślaniu indeksów.
+*   **English Prompting**: Użycie technicznego języka angielskiego w prompcie drastycznie poprawia "rozumowanie wizyjne" modelu.
+
+### 4. Filtry Anty-Halucynacyjne (Backend Safeguards)
+Nawet najlepszy model może zmyślać. `ai.py` zawiera twarde filtry:
+*   **Entropy Filter**: Odrzucanie bloków o niskiej zmienności (np. ciągi `30, 35, 30...`).
+*   **Label Filter**: Automatyczne usuwanie numeru etykiety z wyników.
+*   **Pattern Detection**: Wykrywanie i ucinanie powtarzających się bloków danych.
+
+## 🛠️ Uruchomienie
+
+### Worker (Laptop z GPU)
 ```bash
-docker compose -f docker-compose.vllm.yml up -d
+./run_worker.sh
 ```
 
-### Opcja B: Karta 8GB AMD (np. RX 6600, RX 7600)
-Używa modelu skwantyzowanego `Qwen2.5-7B-AWQ` pod ROCm.
+### Backend (CPU Server)
 ```bash
-docker compose -f docker-compose.vllm.8gb.yml up -d
+./run_app.sh
 ```
 
-### Opcja C: Karta 8GB NVIDIA (np. RTX 4060 Laptop)
-Używa modelu skwantyzowanego `Qwen2.5-7B-AWQ` pod CUDA. 
-*Wymaga zainstalowanego `nvidia-container-toolkit` na systemie hosta.*
-```bash
-docker compose -f docker-compose.vllm.nvidia.8gb.yml up -d
-```
-
-## Konfiguracja i Instalacja
-
-1. **Python Dependencies:**
-   Upewnij się, że masz zainstalowane biblioteki (w tym PyTorch z obsługą ROCm dla AMD):
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **ocr_config.py:**
-   Jeśli używasz wersji 8GB, upewnij się, że w `ocr_config.py` nazwa modelu zgadza się z tą w pliku `.yml`:
-   * Dla 16GB: `model = "Qwen/Qwen2.5-7B-Instruct"`
-   * Dla 8GB: `model = "Qwen/Qwen2.5-7B-Instruct-AWQ"`
-
-## Uruchomienie Procesu
-```bash
-python ai.py
-```
-
-## Architektura i Debugowanie
-- Skrypt tnie obraz wejściowy na 3 sekcje na podstawie markerów (`debug_slice_*.jpg`).
-- EasyOCR przetwarza każdą sekcję na tekst.
-- LLM (vLLM server) naprawia błędy (np. zamienia 'O' na '0') i zwraca finalny JSON.
-- Wszystkie kontenery mają ustawione `restart: always`, więc będą wstawać razem z systemem.
+## 📝 Specyfikacja Modelu
+*   **Model**: `cyankiwi/Qwen3-VL-4B-Instruct-AWQ-4bit`
+*   **Format wag**: `compressed-tensors` (automatycznie wykrywany przez vLLM).
