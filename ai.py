@@ -75,10 +75,6 @@ def ai_check(processed_array, marker_y_levels=None, host=None, host_type='remote
     all_results = {}
     print(f"DEBUG: Processing {len(slices)} slices via VISION worker {host_type}...")
     for i, slice_img in enumerate(slices):
-        debug_path = os.path.join(SCRIPT_DIR, f"debug_slice_{i+1}.jpg")
-        try: cv2.imwrite(debug_path, slice_img)
-        except Exception: pass
-
         print(f"DEBUG: Processing slice {i+1}/{len(slices)}...")
         res = call_remote_worker(slice_img, prompt, host_type)
 

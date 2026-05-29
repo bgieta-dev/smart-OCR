@@ -5,26 +5,29 @@ from pdf2image import convert_from_path
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def image_processing(path):
-    if not os.path.isabs(path):
-        path = os.path.join(SCRIPT_DIR, path)
-        
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Nie znaleziono pliku wejściowego: {path}")
-
-    if path.lower().endswith(".pdf"):
-        try:
-            pages = convert_from_path(path)
-            if not pages:
-                raise ValueError(f"Nie udało się skonwertować PDF (pusta lista stron): {path}")
-            img = pages[0]
-            img = cv.cvtColor(np.array(img), cv.COLOR_RGB2BGR)
-        except Exception as e:
-            raise RuntimeError(f"Błąd podczas konwersji PDF: {str(e)}")
+def image_processing(input_data):
+    # Detect if input is path (str) or bytes
+    if isinstance(input_data, str):
+        if not os.path.isabs(input_data):
+            input_data = os.path.join(SCRIPT_DIR, input_data)
+        if not os.path.exists(input_data):
+            raise FileNotFoundError(f"Nie znaleziono pliku: {input_data}")
+            
+        if input_data.lower().endswith(".pdf"):
+            try:
+                pages = convert_from_path(input_data)
+                img = cv.cvtColor(np.array(pages[0]), cv.COLOR_RGB2BGR)
+            except Exception as e:
+                raise RuntimeError(f"PDF Error: {e}")
+        else:
+            img = cv.imread(input_data)
     else:
-        img = cv.imread(path)
-        if img is None:
-            raise ValueError(f"Nie udało się wczytać obrazu przez OpenCV: {path}")
+        # Assume bytes/buffer
+        file_bytes = np.frombuffer(input_data if isinstance(input_data, bytes) else input_data.read(), np.uint8)
+        img = cv.imdecode(file_bytes, cv.IMREAD_COLOR)
+
+    if img is None:
+        raise ValueError("Nie udało się wczytać obrazu (format nieobsługiwany lub pusty bufor)")
 
     img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     
