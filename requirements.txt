@@ -5,3 +5,8 @@ pillow
 ollama
 opencv-python
 pdf2image
+openai
+paddleocr
+paddlepaddle
+shapely
+pyclipper

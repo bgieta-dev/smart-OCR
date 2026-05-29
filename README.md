@@ -1,40 +1,52 @@
-# Smart-OCR
+# Smart-OCR: Hybrid Pipeline (EasyOCR + LLM)
 
-Narzędzie do ekstrakcji danych numerycznych z dokumentów PDF i obrazów przy użyciu sztucznej inteligencji.
+System do precyzyjnej ekstrakcji danych z tabel 6x10 przy użyciu hybrydowego podejścia:
+1. **EasyOCR** (Stage 1) - Wykrywa surowy tekst i cyfry z obrazu.
+2. **Qwen2.5 LLM** (Stage 2) - Naprawia błędy OCR i układa dane w ustrukturyzowany JSON.
 
-## Funkcjonalność
+## Wymagania sprzętowe i uruchomienie
 
-Program przetwarza skany dokumentów i ekstrahuje liczby z oznaczonych sekcji (P<number>) zwracając dane w uporządkowanej strukturze JSON.
+Wybierz wersję zależnie od swojej karty graficznej (VRAM):
 
-- Wsparcie dla plików PDF i obrazów
-- Automatyczna orientacja dokumentu
-- Wykorzystanie AI (Ollama + qwen3.5:4b) do rozpoznawania OCR
-- Wyniki w formacie JSON
-
-## Instalacja
-
+### Opcja A: Karta 16GB+ (np. RX 7900, RX 9070 XT)
+Używa pełnego modelu `Qwen2.5-7B` dla najwyższej inteligencji.
 ```bash
-pip install -r requirements.txt
+docker compose -f docker-compose.vllm.yml up -d
 ```
 
-## Użycie
-
+### Opcja B: Karta 8GB AMD (np. RX 6600, RX 7600)
+Używa modelu skwantyzowanego `Qwen2.5-7B-AWQ` pod ROCm.
 ```bash
-python3 ai.py
+docker compose -f docker-compose.vllm.8gb.yml up -d
 ```
 
-## Wymagania
+### Opcja C: Karta 8GB NVIDIA (np. RTX 4060 Laptop)
+Używa modelu skwantyzowanego `Qwen2.5-7B-AWQ` pod CUDA. 
+*Wymaga zainstalowanego `nvidia-container-toolkit` na systemie hosta.*
+```bash
+docker compose -f docker-compose.vllm.nvidia.8gb.yml up -d
+```
 
-- Python 3.7+
-- Ollama z modelem qwen3.5:4b
-- OpenCV
-- PIL/Pillow
-- pdf2image
-- ollama-python
+## Konfiguracja i Instalacja
 
-## Struktura projektu
+1. **Python Dependencies:**
+   Upewnij się, że masz zainstalowane biblioteki (w tym PyTorch z obsługą ROCm dla AMD):
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- `ai.py` - główny moduł AI
-- `image_processing.py` - przetwarzanie obrazów
-- `prompt.txt` - prompt dla AI
-- `template.png` - szablon do dopasowania
+2. **ocr_config.py:**
+   Jeśli używasz wersji 8GB, upewnij się, że w `ocr_config.py` nazwa modelu zgadza się z tą w pliku `.yml`:
+   * Dla 16GB: `model = "Qwen/Qwen2.5-7B-Instruct"`
+   * Dla 8GB: `model = "Qwen/Qwen2.5-7B-Instruct-AWQ"`
+
+## Uruchomienie Procesu
+```bash
+python ai.py
+```
+
+## Architektura i Debugowanie
+- Skrypt tnie obraz wejściowy na 3 sekcje na podstawie markerów (`debug_slice_*.jpg`).
+- EasyOCR przetwarza każdą sekcję na tekst.
+- LLM (vLLM server) naprawia błędy (np. zamienia 'O' na '0') i zwraca finalny JSON.
+- Wszystkie kontenery mają ustawione `restart: always`, więc będą wstawać razem z systemem.

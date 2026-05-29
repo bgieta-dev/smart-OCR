@@ -40,25 +40,50 @@ def image_processing(path):
     top, bottom = 0, 0
     
     if h_img > w_img:
-        img_gray = cv.rotate(img_gray, cv.ROTATE_90_CLOCKWISE)
+        img = cv.rotate(img, cv.ROTATE_90_CLOCKWISE)
         h_img, w_img = w_img, h_img
+        img_gray = cv.rotate(img_gray, cv.ROTATE_90_CLOCKWISE)
 
+    # Refined marker detection to return all Y-coordinates
     res = cv.matchTemplate(img_gray, template, cv.TM_CCOEFF_NORMED)
-    threshold = 0.75
+    threshold = 0.8
     loc = np.where(res >= threshold)
-
-    for pt in zip(*loc[::-1]): 
+    
+    marker_points = []
+    for pt in zip(*loc[::-1]):
+        marker_points.append(pt)
         if pt[1] < h_img / 2:
             top += 1
         else:
             bottom += 1
-    
 
     if top < bottom:
-        img_gray = cv.rotate(img_gray, cv.ROTATE_180)
+        img = cv.rotate(img, cv.ROTATE_180)
+        # Flip marker points as well for consistency
+        marker_points = [(w_img - p[0], h_img - p[1]) for p in marker_points]
     
-    img_resized = cv.resize(img_gray, None, fx=0.5, fy=0.5, interpolation=cv.INTER_AREA)
-    return img_resized
+    # Sort markers by Y coordinate to identify rows
+    marker_points.sort(key=lambda p: p[1])
+    
+    # Group markers that are on the same Y level (within 20px)
+    unique_y_levels = []
+    if marker_points:
+        current_y = marker_points[0][1]
+        unique_y_levels.append(current_y)
+        for p in marker_points[1:]:
+            if abs(p[1] - current_y) > 40: # Significant jump to next row
+                current_y = p[1]
+                unique_y_levels.append(current_y)
+
+    # Enhance contrast using CLAHE
+    lab = cv.cvtColor(img, cv.COLOR_BGR2LAB)
+    l, a, b = cv.split(lab)
+    clahe = cv.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    cl = clahe.apply(l)
+    limg = cv.merge((cl,a,b))
+    img_enhanced = cv.cvtColor(limg, cv.COLOR_LAB2BGR)
+    
+    return img_enhanced, unique_y_levels
 
 if __name__=="__main__":
     try:
