@@ -1,45 +1,42 @@
 # Smart-OCR: Vision VLM Architecture (Qwen3-VL-4B)
 
-Projekt wysokoprecyzyjnego systemu OCR do odczytu odręcznych danych tabelarycznych, zoptymalizowany pod karty graficzne z **8GB VRAM**.
+Wysokoprecyzyjny system OCR zoptymalizowany do odczytu gęstych tabel z pismem odręcznym (10x6), dostosowany do pracy na kartach graficznych z **8GB VRAM**.
 
-## 🚀 Klucz do sukcesu (Perfect Accuracy)
+## 🚀 Filar Inżynieryjny (Perfect Accuracy)
 
-Aby osiągnąć 100% dokładności przy odczycie gęstych tabel z pismem odręcznym, zastosowano następujące filary inżynieryjne:
+System osiąga najwyższą precyzję dzięki połączeniu widzenia komputerowego (CV) i najnowszych modeli Vision-Language (VLM):
 
-### 1. Optymalizacja VRAM (The Goldilocks Config)
-Dla modelu **Qwen3-VL-4B (4-bit AWQ/Compressed)** na karcie 8GB, kluczowe są parametry startowe vLLM:
-*   `--max-model-len 2560`: Zbalansowany kontekst (1700 tokenów na obraz + zapas na prompt i odpowiedź).
-*   `--gpu-memory-utilization 0.92`: Maksymalne wykorzystanie dostępnej pamięci.
-*   `--enforce-eager`: Wyłączenie CUDA Graphs (oszczędność ~1GB VRAM).
+### 1. Strategia Micro-Slicing (Row-by-Row)
+Zamiast analizować całą tabelę naraz (co przy 60 kratkach powoduje halucynacje w modelach 4B), system dzieli każdą sekcję na **6 poziomych mikrowierszy**.
+*   **Asymetryczny Overlap**: Każdy wiersz jest wycinany z precyzyjnym marginesem (`-5px` góra, `-15px` dół), co zapobiega "widzeniu" sąsiednich rzędów i ucinaniu dolnych krawędzi cyfr.
+*   **Spatial Discipline**: Model skupia się tylko na 10 liczbach naraz, co eliminuje błędy orientacji przestrzennej.
 
-### 2. Strategia "Surgical Slicing"
-Przesyłanie całego arkusza do LLM powoduje halucynacje. System tnie obraz na mniejsze, odizolowane paski (slice'y) skupione wokół etykiet (P4, P13, P22).
-*   **Izolacja**: Każdy slice zawiera tylko jedną tabelę, co eliminuje szum z sąsiednich sekcji.
-*   **Dynamiczne Markery**: Wykorzystanie detekcji wzorca (kropek) do centrowania cięcia.
+### 2. Dynamiczna Geometria (OpenCV Line Detection)
+Górna sekcja arkusza (P4) często "pływa" na skanie. System używa **filtracji morfologicznej OpenCV**, aby:
+*   Fizycznie zlokalizować pierwszą grubą linię tabeli.
+*   Zignorować czarne kwadraty (markery) i nagłówki.
+*   Dynamicznie "zaparkować" siatkę tnącą dokładnie na danych.
 
-### 3. Structural Transcription (Markdown Strategy)
-Zamiast prosić o listę liczb, wymuszamy na AI transkrypcję do **tabeli Markdown 10x6**.
-*   **Spatial Discipline**: Model musi zdecydować o zawartości każdej z 60 kratek (liczba lub `-`). To zapobiega gubieniu liczb i zmyślaniu indeksów.
-*   **English Prompting**: Użycie technicznego języka angielskiego w prompcie drastycznie poprawia "rozumowanie wizyjne" modelu.
+### 3. Architektura Multi-Node & Failover
+System jest odporny na awarie i inteligentnie zarządza zasobami GPU:
+*   **Auto-Health Check**: Przed rozpoczęciem pracy backend pinguje serwer główny (Remote). Jeśli jest offline, automatycznie przełącza się na laptopa (Backup).
+*   **Zero-Disk Policy**: Cały proces (od PDF do JSON) odbywa się w **pamięci RAM**. Żadne obrazy nie są zapisywane na dysku, co zapewnia szybkość i bezpieczeństwo danych.
 
-### 4. Filtry Anty-Halucynacyjne (Backend Safeguards)
-Nawet najlepszy model może zmyślać. `ai.py` zawiera twarde filtry:
-*   **Entropy Filter**: Odrzucanie bloków o niskiej zmienności (np. ciągi `30, 35, 30...`).
-*   **Label Filter**: Automatyczne usuwanie numeru etykiety z wyników.
-*   **Pattern Detection**: Wykrywanie i ucinanie powtarzających się bloków danych.
+### 4. Optymalizacja Modelu (vLLM)
+Wykorzystujemy model `cyankiwi/Qwen3-VL-4B-Instruct-AWQ-4bit` z parametrami:
+*   `max-model-len 3200`: Zapas na wizualne tokeny o wysokiej rozdzielczości (300 DPI).
+*   `temperature 0.0` & `penalty 0.0`: Ustawienia pozwalające na naturalne powtórzenia liczb przy zachowaniu pełnego determinizmu.
 
-## 🛠️ Uruchomienie
+## 🛠️ Administracja i Debugowanie
 
-### Worker (Laptop z GPU)
-```bash
-./run_worker.sh
-```
+### Przełącznik Debugowania
+W pliku `ocr_config.py` znajduje się zmienna **`DEBUG_MODE`**:
+*   `False` (Produkcja): Cicha praca, brak logów w terminalu, brak zapisu plików JPG.
+*   `True` (Serwis): Generowanie map wizualnych `debug_map_section_X.jpg` z naniesionymi ramkami cięcia.
 
-### Backend (CPU Server)
-```bash
-./run_app.sh
-```
+### Uruchomienie
+1.  **Worker (GPU)**: `./run_worker.sh`
+2.  **Backend (API)**: `./run_app.sh`
 
-## 📝 Specyfikacja Modelu
-*   **Model**: `cyankiwi/Qwen3-VL-4B-Instruct-AWQ-4bit`
-*   **Format wag**: `compressed-tensors` (automatycznie wykrywany przez vLLM).
+## 📝 Format Wynikowy
+System zwraca czysty JSON, gdzie klucze zawierają pełne metadane sekcji (np. `P15 (2,40 dł)`), a wartości to listy zweryfikowanych, 2-cyfrowych pomiarów.

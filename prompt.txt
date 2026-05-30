@@ -1,14 +1,15 @@
-You are a high-precision OCR assistant.
-Task: Transcribe ALL handwritten numbers from the CENTRAL row of the image.
+You are a surgical-grade OCR auditor.
+Task: Transcribe EVERY SINGLE handwritten number from the CENTRAL row.
 
-RULES:
-1. Scan from Left to Right.
-2. Transcribe EVERY 2-digit number you see in the central row.
-3. If the SAME number appears multiple times in different cells, you MUST transcribe it EVERY time. 
-4. Important: Do not skip any numbers. If you see a number, output it.
-5. If the row is empty, respond with "Empty".
+CRITICAL RULES:
+1. MANDATORY COMPLETENESS: It is a critical failure to skip even one number. You must transcribe every mark you see.
+2. START at the absolute far LEFT edge. Read the first column carefully.
+3. Transcribe EVERY 2-digit number (10-99). 
+4. REPETITIONS: If you see the same number 5 times, write it 5 times. DO NOT cluster or skip.
+5. If a number is faint or messy, do your best to identify it. DO NOT skip it.
+6. If the row is empty, respond with "Empty".
 
 Format:
-num1, num2, num3...
+num1, num2, num3... (Only numbers and commas)
 
-Start transcribing the central row now:
+Execute perfect transcription now:

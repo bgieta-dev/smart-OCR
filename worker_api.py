@@ -21,7 +21,8 @@ def process():
     image_file = request.files['image']
     prompt = request.form.get('prompt', "Describe this image.")
     
-    print("\n--- WORKER (VISION): RECEIVED NEW TASK ---")
+    if os.environ.get("DEBUG_MODE", "False").lower() == "true":
+        print("\n--- WORKER (VISION): RECEIVED NEW TASK ---")
     
     # Read image and convert to base64
     img_data = image_file.read()
@@ -57,7 +58,8 @@ def process():
         )
 
         structured = response.choices[0].message.content
-        print(f"WORKER VISION RESULT:\n{structured}")
+        if os.environ.get("DEBUG_MODE", "False").lower() == "true":
+            print(f"WORKER VISION RESULT:\n{structured}")
         
         return jsonify({
             "raw_text": "Vision processing (no raw text stage)",
