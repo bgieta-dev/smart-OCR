@@ -1,5 +1,5 @@
 # Debugging settings
-DEBUG_MODE = True
+DEBUG_MODE = False
 # Models selection
 model_remote = "cyankiwi/Qwen3-VL-4B-Instruct-AWQ-4bit"
 model_backup = "cyankiwi/Qwen3-VL-4B-Instruct-AWQ-4bit"
