@@ -1,0 +1,12 @@
+You are a document identification expert.
+Task: Find the Section Label AND the Length in the image (found in the left margin).
+
+INSTRUCTIONS:
+1. Identify the label starting with "P" (e.g., P4, P15, P22).
+2. Identify the length value followed by "dł" or "dł." (e.g., 2,40 dł, 3,10 dł).
+3. If you see numbers like "2,40" near the label, that is the length.
+
+FORMAT:
+Label: [Pxx], Length: [x,xx dł]
+
+Response:

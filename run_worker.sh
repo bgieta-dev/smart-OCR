@@ -35,3 +35,5 @@ echo "  docker logs -f ocr-vision-worker"
 echo ""
 echo "NOTE: It may take several minutes to download the model and capture CUDA graphs."
 echo "Wait until vLLM logs say 'Uvicorn running on http://0.0.0.0:8000' before using the app."
+
+docker logs -f vllm-vision

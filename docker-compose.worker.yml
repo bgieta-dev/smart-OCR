@@ -18,8 +18,8 @@ services:
               capabilities: [gpu]
     command: >
       --model cyankiwi/Qwen3-VL-4B-Instruct-AWQ-4bit
-      --gpu-memory-utilization 0.92
-      --max-model-len 2560
+      --gpu-memory-utilization 0.95
+      --max-model-len 3200
       --max-num-seqs 1
       --trust-remote-code
       --enforce-eager

@@ -25,6 +25,8 @@ def process():
     
     # Read image and convert to base64
     img_data = image_file.read()
+    base64_image = base64.b64encode(img_data).decode('utf-8')
+    
     data = request.form
     prompt = data.get("prompt", "Analyze this image.")
     # Add a unique salt to the prompt to bypass prefix caching
@@ -46,13 +48,16 @@ def process():
                     ],
                 }
             ],
-            max_tokens=400,
+            max_tokens=800,
             temperature=0.0,
+            frequency_penalty=0.0,
+            presence_penalty=0.0,
+            stop=["<EOF>", "Row 7", "Row 8"],
             seed=int(request_id) if request_id.isdigit() else 42
         )
 
         structured = response.choices[0].message.content
-        print(f"WORKER VISION RESULT:\n{structured[:500]}...")
+        print(f"WORKER VISION RESULT:\n{structured}")
         
         return jsonify({
             "raw_text": "Vision processing (no raw text stage)",

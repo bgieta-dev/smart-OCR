@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 import os
-from pdf2image import convert_from_path
+from pdf2image import convert_from_path, convert_from_bytes
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,7 +15,8 @@ def image_processing(input_data):
             
         if input_data.lower().endswith(".pdf"):
             try:
-                pages = convert_from_path(input_data)
+                # Increase DPI to 300 for better OCR precision
+                pages = convert_from_path(input_data, dpi=300)
                 img = cv.cvtColor(np.array(pages[0]), cv.COLOR_RGB2BGR)
             except Exception as e:
                 raise RuntimeError(f"PDF Error: {e}")
@@ -23,8 +24,21 @@ def image_processing(input_data):
             img = cv.imread(input_data)
     else:
         # Assume bytes/buffer
-        file_bytes = np.frombuffer(input_data if isinstance(input_data, bytes) else input_data.read(), np.uint8)
-        img = cv.imdecode(file_bytes, cv.IMREAD_COLOR)
+        image_bytes = input_data if isinstance(input_data, bytes) else input_data.read()
+        
+        # Check for PDF magic bytes (%PDF-)
+        if image_bytes.startswith(b'%PDF'):
+            try:
+                # Increase DPI to 300 for better OCR precision
+                pages = convert_from_bytes(image_bytes, dpi=300)
+                if not pages:
+                    raise ValueError("PDF bufor jest pusty lub uszkodzony")
+                img = cv.cvtColor(np.array(pages[0]), cv.COLOR_RGB2BGR)
+            except Exception as e:
+                raise RuntimeError(f"Błąd konwersji PDF w RAM: {e}")
+        else:
+            file_bytes = np.frombuffer(image_bytes, np.uint8)
+            img = cv.imdecode(file_bytes, cv.IMREAD_COLOR)
 
     if img is None:
         raise ValueError("Nie udało się wczytać obrazu (format nieobsługiwany lub pusty bufor)")
